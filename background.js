@@ -85,3 +85,30 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
     }
   }
 });
+
+// Listener for window focus changes within Chrome
+chrome.windows.onFocusChanged.addListener((windowId) => {
+  if (windowId === chrome.windows.WINDOW_ID_NONE) {
+    // Window is unfocused, pause video in last active tab if it's a YouTube video
+    if (lastActiveTabId !== null && lastActiveTabUrl && lastActiveTabUrl.includes("youtube.com")) {
+      pauseVideoInTab(lastActiveTabId);
+      videoWasPaused = true;
+    }
+  } else {
+    // Window is focused, check if the last active tab is a YouTube video
+    chrome.tabs.query({ active: true, lastFocusedWindow: true }, (tabs) => {
+      if (tabs && tabs.length > 0) {
+        const activeTab = tabs[0];
+        if (activeTab.url && activeTab.url.includes("youtube.com")) {
+          // If the video was paused and now the window is focused again, play the video
+          if (videoWasPaused) {
+            playVideoInTab(activeTab.id);
+            videoWasPaused = false;
+          }
+        }
+        lastActiveTabId = activeTab.id;
+        lastActiveTabUrl = activeTab.url;
+      }
+    });
+  }
+});
